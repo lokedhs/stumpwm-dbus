@@ -1,10 +1,13 @@
+(in-package :stumpwm-dbus)
+
 #+nil(progn
   (push #p"~/src/xml-emitter/" asdf:*central-registry*)
-  (push #p"~/src/dbus/" asdf:*central-registry*)
-  (ql:quickload "dbus"))
+  (push #p"~/src/dbus/" asdf:*central-registry*))
 
 (defvar *current-id* 1)
+(defvar *active-notifications* nil)
 (defvar *current-id-lock* (bordeaux-threads:make-lock))
+(defvar *current-id-condvar* (bordeaux-threads:make-condition-variable))
 
 (defclass notification ()
   ((id             :type integer
@@ -49,6 +52,9 @@
                                      :app-name app-name
                                      :actions actions
                                      :expire-timeout expire-timeout)))
+    (bordeaux-threads:with-lock-held (*current-id-lock*)
+      (push notification *active-notifications*)
+      (bordeaux-threads:condition-notify *current-id-condvar*))
     (notification/id notification)))
 
 (defun foo ()
