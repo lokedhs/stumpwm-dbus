@@ -43,20 +43,25 @@
   (format t "get-capabilities~%")
   nil)
 
+(defvar *notification-callback* nil
+  "Bound to the callback function during the evaluation of POLL-EVENTS")
+
 (dbus:define-dbus-method notify (app-name replaces-id app-icon summary body actions hints expire-timeout)
     (:in "susssasa{sv}i" :out "i" :dbus-name "Notify")
-  (format t "Notify got summary: ~s, body: ~s, actions: ~s, hints: ~s, timeout: ~s~%" summary body actions hints expire-timeout)
+  #+nil(format t "Notify got summary: ~s, body: ~s, actions: ~s, hints: ~s, timeout: ~s~%" summary body actions hints expire-timeout)
   (let ((notification (make-instance 'notification
                                      :title summary
                                      :body body
                                      :app-name app-name
                                      :actions actions
                                      :expire-timeout expire-timeout)))
-    (bordeaux-threads:with-lock-held (*current-id-lock*)
-      (push notification *active-notifications*)
-      (bordeaux-threads:condition-notify *current-id-condvar*))
+    #+nil(bordeaux-threads:with-lock-held (*current-id-lock*)
+           (push notification *active-notifications*)
+           (bordeaux-threads:condition-notify *current-id-condvar*))
+    (funcall *notification-callback* notification)
     (notification/id notification)))
 
-(defun foo ()
-  (dbus:with-open-bus (bus (dbus:session-server-addresses))
-    (dbus:dbus-serve bus "org.freedesktop.Notifications" "com.dhsdevelopments.stumpwm-notifications" nil)))
+(defun poll-events (notification-received-fn)
+  (let ((*notification-callback* notification-received-fn))
+    (dbus:with-open-bus (bus (dbus:session-server-addresses))
+      (dbus:dbus-serve bus "org.freedesktop.Notifications" "com.dhsdevelopments.stumpwm-notifications" nil))))
