@@ -3,7 +3,7 @@
 (declaim (optimize (speed 0) (safety 3) (debug 3)))
 
 (defvar *active-notifications* nil)
-(defvar *notifications-callbacks* nil)
+(defvar *current-frame* nil)
 (defvar *notifications-lock* (bordeaux-threads:make-lock "Notifications lock"))
 
 (defun present-to-stream (obj stream)
@@ -41,7 +41,7 @@
   (format stream "~%")
   (clim:with-text-style (stream (clim:make-text-style nil :bold nil))
     (format stream "~a" (notification/title obj)))
-  (format stream "~%~a" (notification/body obj)))
+  (format stream "~%~a~%~%" (notification/body obj)))
 
 (clim:define-presentation-to-command-translator select-notification
     (notification close-notification notifications-frame)
@@ -53,22 +53,22 @@
   (remove-notification obj))
 
 (defun remove-notification (msg)
-  (let ((callbacks (bordeaux-threads:with-lock-held (*notifications-lock*)
-                     (setf *active-notifications* (remove msg *active-notifications*))
-                     *notifications-callbacks*)))
-    (dolist (fn callbacks)
-      (funcall fn))))
+  (bordeaux-threads:with-lock-held (*notifications-lock*)
+    (setf *active-notifications* (remove msg *active-notifications*))))
 
 (defun display-notifications (frame stream)
   (declare (ignore frame))
   (let ((m (bordeaux-threads:with-lock-held (*notifications-lock*)
              (copy-seq *active-notifications*))))
-    (dolist (msg m)
+    (dolist (msg (reverse m))
       (present-to-stream msg stream))))
 
-(defun refresh-frame (frame)
-  (with-call-in-event-handler frame
-    (clim:redisplay-frame-pane frame (clim:find-pane-named frame 'notifications))))
+(defun refresh-frame ()
+  (let ((frame (bordeaux-threads:with-lock-held (*notifications-lock*)
+                 *current-frame*)))
+    (when frame
+      (with-call-in-event-handler frame
+        (clim:redisplay-frame-pane frame (clim:find-pane-named frame 'notifications))))))
 
 (defun process-incoming-notification (frame msg)
   (with-call-in-event-handler frame
@@ -77,11 +77,9 @@
 
 (defun poll-loop ()
   (poll-events (lambda (msg)
-                 (let ((callbacks (bordeaux-threads:with-lock-held (*notifications-lock*)
-                                    (push msg *active-notifications*)
-                                    (copy-seq *notifications-callbacks*))))
-                   (dolist (fn callbacks)
-                     (funcall fn))))))
+                 (bordeaux-threads:with-lock-held (*notifications-lock*)
+                   (push msg *active-notifications*))
+                 (refresh-frame))))
 
 (defun start-notifications-thread ()
   (bordeaux-threads:make-thread #'poll-loop :name "Dbus notifications poll thread"))
@@ -89,15 +87,13 @@
 (defun display-frame ()
   (let* ((frame (clim:make-application-frame 'notifications-frame
                                              :width 200 :height 300
-                                             :override-redirect t))
-         (callback (lambda ()
-                     (refresh-frame frame))))
+                                             :override-redirect t)))
     (bordeaux-threads:with-lock-held (*notifications-lock*)
-      (push callback *notifications-callbacks*))
+      (setq *current-frame* frame))
     (unwind-protect
          (clim:run-frame-top-level frame)
       (bordeaux-threads:with-lock-held (*notifications-lock*)
-        (setf *notifications-callbacks* (remove callback *notifications-callbacks*))))))
+        (setq *current-frame* nil)))))
 
 (defun debug-frame ()
   (let ((thread (start-notifications-thread)))
