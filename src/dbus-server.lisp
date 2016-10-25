@@ -5,9 +5,7 @@
   (push #p"~/src/dbus/" asdf:*central-registry*))
 
 (defvar *current-id* 1)
-(defvar *active-notifications* nil)
 (defvar *current-id-lock* (bordeaux-threads:make-lock))
-(defvar *current-id-condvar* (bordeaux-threads:make-condition-variable))
 
 (defclass notification ()
   ((id             :type integer
