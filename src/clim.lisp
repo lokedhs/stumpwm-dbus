@@ -28,8 +28,8 @@
   (:layouts (default (clim:vertically ()
                        notifications))))
 
-(defmethod clim-internals::frame-is-override-redirect-p ((frame notifications-frame))
-  t)
+(defmethod clim-internals::find-frame-type ((frame notifications-frame))
+  :dialog)
 
 (defmethod clim:frame-standard-output ((frame notifications-frame))
   (clim:find-pane-named frame 'notifications))
