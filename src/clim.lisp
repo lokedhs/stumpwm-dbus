@@ -16,6 +16,46 @@
 (defmacro with-call-in-event-handler (frame &body body)
   `(call-in-event-handler ,frame (lambda () ,@body)))
 
+;;;
+;;;  popup
+;;;
+
+(defclass popup-view (clim:view)
+  ())
+
+(clim:define-application-frame popup-frame ()
+  ((notification :initarg :notification
+                 :reader popup-frame/notification))
+  (:panes (content :application
+                   :default-view (make-instance 'popup-view)
+                   :display-function 'display-popup-content
+                   :scroll-bars :vertical))
+  (:layouts (default (clim:vertically ()
+                       content))))
+
+(defmethod clim-extensions:find-frame-type ((frame popup-frame))
+  :override-redirect)
+
+(defun display-popup-content (frame stream)
+  (present-to-stream (popup-frame/notification frame) stream))
+
+(defmethod clim:note-frame-enabled (fn (frame popup-frame))
+  nil)
+
+(defun open-popup (msg)
+  (let ((frame (clim:make-application-frame 'popup-frame
+                                            :width 200 :height 100
+                                            :notification msg)))
+    (stumpwm:with-call-in-main-thread
+      (stumpwm:run-with-timer 5 nil (lambda ()
+                                      (with-call-in-event-handler frame
+                                        (clim:frame-exit frame)))))
+    (clim:run-frame-top-level frame)))
+
+;;;
+;;;  notifications-frame
+;;;
+
 (defclass notifications-view (clim:view)
   ())
 
@@ -28,13 +68,13 @@
   (:layouts (default (clim:vertically ()
                        notifications))))
 
-(defmethod clim-internals::find-frame-type ((frame notifications-frame))
+(defmethod clim-extensions:find-frame-type ((frame notifications-frame))
   :dialog)
 
 (defmethod clim:frame-standard-output ((frame notifications-frame))
   (clim:find-pane-named frame 'notifications))
 
-(clim:define-presentation-method clim:present (obj (type notification) stream (view notifications-view) &key)
+(clim:define-presentation-method clim:present (obj (type notification) stream view &key)
   (format stream "~&")
   (clim:with-text-style (stream (clim:make-text-style nil nil 8))
     (format stream "~a" (notification/app-name obj)))
@@ -70,15 +110,12 @@
       (with-call-in-event-handler frame
         (clim:redisplay-frame-pane frame (clim:find-pane-named frame 'notifications))))))
 
-(defun process-incoming-notification (frame msg)
-  (with-call-in-event-handler frame
-    (push msg (notifications-frame/msg frame))
-    (clim:redisplay-frame-pane frame (clim:find-pane-named frame 'notifications))))
-
 (defun poll-loop ()
   (poll-events (lambda (msg)
                  (bordeaux-threads:with-lock-held (*notifications-lock*)
                    (push msg *active-notifications*))
+                 (bordeaux-threads:make-thread (lambda ()
+                                                 (open-popup msg)))
                  (refresh-frame))))
 
 (defun start-notifications-thread ()

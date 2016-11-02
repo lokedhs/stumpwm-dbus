@@ -23,7 +23,10 @@
                    :reader notification/actions)
    (expire-timeout :type integer
                    :initarg :expire-timeout
-                   :reader notifications/expire-timeout)))
+                   :reader notification/expire-timeout)
+   (created-date   :type integer
+                   :initarg :created-date
+                   :reader notification/created-date)))
 
 (defmethod initialize-instance :after ((obj notification) &key)
   (setf (slot-value obj 'id)
@@ -52,7 +55,8 @@
                                      :body body
                                      :app-name app-name
                                      :actions actions
-                                     :expire-timeout expire-timeout)))
+                                     :expire-timeout expire-timeout
+                                     :created-date (get-universal-time))))
     #+nil(bordeaux-threads:with-lock-held (*current-id-lock*)
            (push notification *active-notifications*)
            (bordeaux-threads:condition-notify *current-id-condvar*))
