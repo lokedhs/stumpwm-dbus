@@ -11,4 +11,5 @@
                         :serial t
                         :components ((:file "package")
                                      (:file "dbus-server")
-                                     (:file "clim")))))
+                                     (:file "clim")
+                                     (:file "commands")))))
