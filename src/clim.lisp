@@ -115,8 +115,8 @@
   (poll-events (lambda (msg)
                  (bordeaux-threads:with-lock-held (*notifications-lock*)
                    (push msg *active-notifications*))
-                 #+nil(bordeaux-threads:make-thread (lambda ()
-                                                      (open-popup msg)))
+                 (bordeaux-threads:make-thread (lambda ()
+                                                 (open-popup msg)))
                  (refresh-frame))))
 
 (defun start-notifications-thread ()
