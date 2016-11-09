@@ -93,6 +93,13 @@
     ((obj 'notification))
   (remove-notification obj))
 
+(define-notifications-frame-command (close-frame :name "Close frame" :keystroke (:b :control))
+    ()
+  (log:info "Close!"))
+
+(defmethod clim:handle-event :after (frame event)
+  (log:trace "Got event: ~s, on port: ~s" event frame))
+
 (defun remove-notification (msg)
   (bordeaux-threads:with-lock-held (*notifications-lock*)
     (setf *active-notifications* (remove msg *active-notifications*))))

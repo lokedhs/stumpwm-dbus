@@ -6,7 +6,8 @@
                :mcclim
                :bordeaux-threads
                :alexandria
-               :dbus)
+               :dbus
+               :log4cl)
   :components ((:module "src"
                         :serial t
                         :components ((:file "package")
