@@ -31,6 +31,11 @@
               *current-id*
             (incf *current-id*)))))
 
+(defmethod print-object ((obj notification) stream)
+  (print-unreadable-object (obj stream :type t)
+    (with-slots (id title app-name) obj
+      (format stream "~a ~s ~s" id title app-name))))
+
 (dbus:define-dbus-object notification-service
   (:path "/org/freedesktop/Notifications"))
 
@@ -59,7 +64,7 @@
     (:int32)
   (:interface "org.freedesktop.Notifications")
 
-  (declare (ignore replaces-id app-icon))
+  (declare (ignore app-icon hints replaces-id))
 
   (let ((notification (make-instance 'notification
                                      :title summary

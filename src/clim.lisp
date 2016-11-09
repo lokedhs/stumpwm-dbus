@@ -39,17 +39,18 @@
 (defun display-popup-content (frame stream)
   (present-to-stream (popup-frame/notification frame) stream))
 
-(defmethod clim:note-frame-enabled (fn (frame popup-frame))
+(defmethod clim:note-frame-enabled :after (fn (frame popup-frame))
   nil)
 
 (defun open-popup (msg)
   (let ((frame (clim:make-application-frame 'popup-frame
                                             :width 200 :height 100
                                             :notification msg)))
-    (stumpwm:with-call-in-main-thread
-      (stumpwm:run-with-timer 5 nil (lambda ()
-                                      (with-call-in-event-handler frame
-                                        (clim:frame-exit frame)))))
+    (stumpwm:call-in-main-thread
+     (lambda ()
+       (stumpwm:run-with-timer 5 nil (lambda ()
+                                       (with-call-in-event-handler frame
+                                         (clim:frame-exit frame))))))
     (clim:run-frame-top-level frame)))
 
 ;;;
@@ -114,8 +115,8 @@
   (poll-events (lambda (msg)
                  (bordeaux-threads:with-lock-held (*notifications-lock*)
                    (push msg *active-notifications*))
-                 (bordeaux-threads:make-thread (lambda ()
-                                                 (open-popup msg)))
+                 #+nil(bordeaux-threads:make-thread (lambda ()
+                                                      (open-popup msg)))
                  (refresh-frame))))
 
 (defun start-notifications-thread ()
