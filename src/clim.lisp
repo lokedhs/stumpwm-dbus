@@ -91,6 +91,10 @@
     ((obj 'notification))
   (remove-notification obj))
 
+(define-notifications-frame-command (close-add-notifications :name "Close all notifications" :keystroke (#\c))
+    ()
+  (remove-all))
+
 (define-notifications-frame-command (close-frame :name "Close frame" :keystroke (:escape))
     ()
   (clim:frame-exit clim:*application-frame*))
@@ -101,6 +105,10 @@
 (defun remove-notification (msg)
   (bordeaux-threads:with-lock-held (*notifications-lock*)
     (setf *active-notifications* (remove msg *active-notifications*))))
+
+(defun remove-all ()
+  (bordeaux-threads:with-lock-held (*notifications-lock*)
+    (setf *active-notifications* nil)))
 
 (defun display-notifications (frame stream)
   (declare (ignore frame))
