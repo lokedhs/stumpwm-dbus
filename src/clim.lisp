@@ -46,11 +46,9 @@
   (let ((frame (clim:make-application-frame 'popup-frame
                                             :width 200 :height 100
                                             :notification msg)))
-    (stumpwm:call-in-main-thread
-     (lambda ()
-       (stumpwm:run-with-timer 5 nil (lambda ()
-                                       (with-call-in-event-handler frame
-                                         (clim:frame-exit frame))))))
+    (stumpwm:run-with-timer 5 nil (lambda ()
+                                    (with-call-in-event-handler frame
+                                      (clim:frame-exit frame))))
     (clim:run-frame-top-level frame)))
 
 ;;;
