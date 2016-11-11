@@ -43,7 +43,7 @@
   (:interface "org.freedesktop.Notifications")
   (values "StumpWM notifications service" "com.dhsdevelopments" "1.0" "1.2"))
 
-(dbus:define-dbus-method (notification-service get-capabilities) () (:array :string)
+(dbus:define-dbus-method (notification-service get-capabilities) () ((:array :string))
   (:interface "org.freedesktop.Notifications")
   (format t "get-capabilities~%")
   nil)
