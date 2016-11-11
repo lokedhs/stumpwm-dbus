@@ -91,9 +91,9 @@
     ((obj 'notification))
   (remove-notification obj))
 
-(define-notifications-frame-command (close-frame :name "Close frame" :keystroke (:b :control))
+(define-notifications-frame-command (close-frame :name "Close frame" :keystroke (:escape))
     ()
-  (log:info "Close!"))
+  (clim:frame-exit clim:*application-frame*))
 
 (defmethod clim:handle-event :after (frame event)
   (log:trace "Got event: ~s, on port: ~s" event frame))
