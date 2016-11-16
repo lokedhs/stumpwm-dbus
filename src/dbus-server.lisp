@@ -80,4 +80,4 @@
   (let ((*notification-callback* notification-received-fn))
     (dbus:with-open-bus (bus (dbus:session-server-addresses))
       (dbus:request-name bus "org.freedesktop.Notifications")
-      (dbus:publish-objects (dbus:bus-connection bus)))))
+      (dbus:publish-objects (dbus:bus-connection bus) '(notification-service)))))
