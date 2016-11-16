@@ -13,4 +13,5 @@
                         :components ((:file "package")
                                      (:file "dbus-server")
                                      (:file "clim")
-                                     (:file "commands")))))
+                                     (:file "commands")
+                                     (:file "media")))))
