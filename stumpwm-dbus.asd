@@ -14,4 +14,5 @@
                                      (:file "dbus-server")
                                      (:file "clim")
                                      (:file "commands")
-                                     (:file "media")))))
+                                     (:file "media")
+                                     (:file "pidgin")))))
