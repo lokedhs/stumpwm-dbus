@@ -140,7 +140,11 @@ popup will not be displayed at all."))
     (push msg *active-notifications*))
   (bordeaux-threads:make-thread (lambda ()
                                   (open-popup msg)))
-  (refresh-frame))
+  (refresh-frame)
+  ;; Currently disabled until I can figure out the proper way to refresh the modeline
+  #+nil(unless *debug*
+    (stumpwm:call-in-main-thread (lambda ()
+                                   (stumpwm:enable-mode-line)))))
 
 (defun notifications-poll-loop ()
   (poll-events #'process-incoming-message))

@@ -11,6 +11,10 @@
     (error "Notifications frame is already open"))
   (bordeaux-threads:make-thread #'display-frame :name "Notifications frame main loop"))
 
+(defun num-active-notifications ()
+  (bordeaux-threads:with-lock-held (*notifications-lock*)
+    (length *active-notifications*)))
+
 (defun fmt-num-notifications (ml &rest args)
   (declare (ignore ml args))
   (let ((n (bordeaux-threads:with-lock-held (*notifications-lock*)
