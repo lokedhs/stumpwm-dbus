@@ -16,12 +16,28 @@
 (defmacro with-call-in-event-handler (frame &body body)
   `(call-in-event-handler ,frame (lambda () ,@body)))
 
+(defvar *debug* nil)
+
+(defun run-at-time (fn time)
+  (if *debug*
+      (progn
+        #+sbcl (sb-ext:schedule-timer (sb-ext:make-timer fn) time)
+        #-sbcl (error "Debug mode only works on SBCL"))
+      (stumpwm:run-with-timer time nil fn)))
+
 ;;;
 ;;;  popup
 ;;;
 
 (defclass popup-view (clim:view)
-  ())
+  ()
+  (:documentation "View that is used to display messages in a popup frame."))
+
+(defgeneric popup-timeout (msg)
+  (:method (msg) 5)
+  (:documentation "The time in seconds that the given message will be displayed.
+If NIL, the popup has to be closed manually. If :NONE, the
+popup will not be displayed at all."))
 
 (clim:define-application-frame popup-frame ()
   ((notification :initarg :notification
@@ -43,13 +59,17 @@
   nil)
 
 (defun open-popup (msg)
-  (let ((frame (clim:make-application-frame 'popup-frame
-                                            :width 200 :height 100
-                                            :notification msg)))
-    (stumpwm:run-with-timer 5 nil (lambda ()
-                                    (with-call-in-event-handler frame
-                                      (clim:frame-exit frame))))
-    (clim:run-frame-top-level frame)))
+  (let ((timeout (popup-timeout msg)))
+    (unless (eq timeout :none)
+      (let ((frame (clim:make-application-frame 'popup-frame
+                                                :width 200 :height 100
+                                                :notification msg)))
+        (when timeout
+          (run-at-time (lambda ()
+                         (with-call-in-event-handler frame
+                           (clim:frame-exit frame)))
+                       timeout))
+        (clim:run-frame-top-level frame)))))
 
 ;;;
 ;;;  notifications-frame
@@ -73,15 +93,6 @@
 (defmethod clim:frame-standard-output ((frame notifications-frame))
   (clim:find-pane-named frame 'notifications))
 
-(clim:define-presentation-method clim:present (obj (type notification) stream view &key)
-  (format stream "~&")
-  (clim:with-text-style (stream (clim:make-text-style nil nil 8))
-    (format stream "~a" (notification/app-name obj)))
-  (format stream "~%")
-  (clim:with-text-style (stream (clim:make-text-style nil :bold nil))
-    (format stream "~a" (notification/title obj)))
-  (format stream "~%~a~%~%" (notification/body obj)))
-
 (clim:define-presentation-to-command-translator select-notification
     (notification close-notification notifications-frame)
     (obj)
@@ -91,7 +102,7 @@
     ((obj 'notification))
   (remove-notification obj))
 
-(define-notifications-frame-command (close-add-notifications :name "Close all notifications" :keystroke (#\c))
+(define-notifications-frame-command (close-all-notifications :name "Close all notifications" :keystroke (#\c))
     ()
   (remove-all))
 
@@ -124,16 +135,22 @@
       (with-call-in-event-handler frame
         (clim:redisplay-frame-pane frame (clim:find-pane-named frame 'notifications))))))
 
-(defun poll-loop ()
-  (poll-events (lambda (msg)
-                 (bordeaux-threads:with-lock-held (*notifications-lock*)
-                   (push msg *active-notifications*))
-                 (bordeaux-threads:make-thread (lambda ()
-                                                 (open-popup msg)))
-                 (refresh-frame))))
+(defun process-incoming-message (msg)
+  (bordeaux-threads:with-lock-held (*notifications-lock*)
+    (push msg *active-notifications*))
+  (bordeaux-threads:make-thread (lambda ()
+                                  (open-popup msg)))
+  (refresh-frame))
+
+(defun notifications-poll-loop ()
+  (poll-events #'process-incoming-message))
+
+(defun pidgin-messages-poll-loop ()
+  (pidgin-listener #'process-incoming-message))
 
 (defun start-notifications-thread ()
-  (bordeaux-threads:make-thread #'poll-loop :name "Dbus notifications poll thread"))
+  (bordeaux-threads:make-thread #'notifications-poll-loop :name "Dbus notifications poll thread")
+  (bordeaux-threads:make-thread #'pidgin-messages-poll-loop :name "Dbus pidgin messages poll thread"))
 
 (defun display-frame ()
   (let* ((frame (clim:make-application-frame 'notifications-frame
@@ -151,3 +168,34 @@
     (unwind-protect
          (display-frame)
       (bordeaux-threads:destroy-thread thread))))
+
+;;;
+;;;  dbus notifications
+;;;
+
+(clim:define-presentation-method clim:present (obj (type notification) stream view &key)
+  (format stream "~&")
+  (clim:with-text-style (stream (clim:make-text-style nil nil 8))
+    (format stream "~a" (notification/app-name obj)))
+  (format stream "~%")
+  (clim:with-text-style (stream (clim:make-text-style nil :bold nil))
+    (format stream "~a" (notification/title obj)))
+  (format stream "~%~a~%~%" (notification/body obj)))
+
+(defmethod popup-timeout ((msg notification))
+  5)
+
+;;;
+;;;  pidgin messages
+;;;
+
+(clim:define-presentation-method clim:present (obj (type pidgin-message) stream view &key)
+  (format stream "~&")
+  (clim:with-text-style (stream (clim:make-text-style nil :bold nil))
+    (format stream "Message from: ~a" (pidgin-message/sender-id obj)))
+  (format stream "~%")
+  (present-html stream (pidgin-message/content obj)))
+
+(defmethod popup-timeout ((msg pidgin-message))
+  10)
+

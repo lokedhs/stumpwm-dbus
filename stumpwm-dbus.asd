@@ -7,12 +7,16 @@
                :bordeaux-threads
                :alexandria
                :dbus
-               :log4cl)
+               :log4cl
+               :cxml
+               :cxml-dom
+               :closure-html)
   :components ((:module "src"
                         :serial t
                         :components ((:file "package")
+                                     (:file "html")
                                      (:file "dbus-server")
-                                     (:file "clim")
+                                     (:file "pidgin")
                                      (:file "commands")
                                      (:file "media")
-                                     (:file "pidgin")))))
+                                     (:file "clim")))))
