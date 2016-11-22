@@ -184,7 +184,9 @@ popup will not be displayed at all."))
   (format stream "~%")
   (clim:with-text-style (stream (clim:make-text-style nil :bold nil))
     (format stream "~a" (notification/title obj)))
-  (format stream "~%~a~%~%" (notification/body obj)))
+  (format stream "~%")
+  (present-html stream (notification/body obj))
+  (format stream "~%~%"))
 
 (defmethod popup-timeout ((msg notification))
   5)
@@ -202,4 +204,3 @@ popup will not be displayed at all."))
 
 (defmethod popup-timeout ((msg pidgin-message))
   10)
-
