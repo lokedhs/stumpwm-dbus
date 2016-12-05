@@ -40,9 +40,9 @@
   (call-media-function "org.mpris.MediaPlayer2.Player" "Next"))
 
 (stumpwm:defcommand media-player-previous () ()
-  "Select the next track on the media player"
+  "Select the previous track on the media player"
   (call-media-function "org.mpris.MediaPlayer2.Player" "Previous"))
 
 (stumpwm:defcommand media-player-seek (offset) ((:number "Amount: "))
-  "Select the next track on the media player"
+  "Seek by the given amount"
   (call-media-function "org.mpris.MediaPlayer2.Player" "Seek" (or offset 10)))
