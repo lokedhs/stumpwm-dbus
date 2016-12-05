@@ -23,5 +23,11 @@
                  (iterate-child-nodes)))))))
 
 (defun present-html (stream text)
-  (let ((doc (closure-html:parse text (cxml-dom:make-dom-builder))))
+  (let (doc)
+    (handler-case
+        (setq doc (closure-html:parse text (cxml-dom:make-dom-builder)))
+      (error (condition)
+        (log:error "Error when parsing text: ~a. Test: ~s" condition text)
+        (format stream "~a" text)
+        (return-from present-html)))
     (iterate-node stream doc)))
