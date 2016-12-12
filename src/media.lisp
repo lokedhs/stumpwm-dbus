@@ -44,5 +44,5 @@
   (call-media-function "org.mpris.MediaPlayer2.Player" "Previous"))
 
 (stumpwm:defcommand media-player-seek (offset) ((:number "Amount: "))
-  "Seek by the given amount"
+  "Seek by some given amount"
   (call-media-function "org.mpris.MediaPlayer2.Player" "Seek" (or offset 10)))
