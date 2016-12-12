@@ -39,6 +39,10 @@
 If NIL, the popup has to be closed manually. If :NONE, the
 popup will not be displayed at all."))
 
+(defgeneric record-notification (msg)
+  (:method (msg) t)
+  (:documentation "Return true if MSG should be saved in the notification list."))
+
 (clim:define-application-frame popup-frame ()
   ((notification :initarg :notification
                  :reader popup-frame/notification))
@@ -136,8 +140,9 @@ popup will not be displayed at all."))
         (clim:redisplay-frame-pane frame (clim:find-pane-named frame 'notifications))))))
 
 (defun process-incoming-message (msg)
-  (bordeaux-threads:with-lock-held (*notifications-lock*)
-    (push msg *active-notifications*))
+  (when (record-notification msg)
+    (bordeaux-threads:with-lock-held (*notifications-lock*)
+      (push msg *active-notifications*)))
   (bordeaux-threads:make-thread (lambda ()
                                   (open-popup msg)))
   (refresh-frame)
